@@ -15,57 +15,49 @@ public class Bot {
 
     private GameState gameState;
 
-    /**
-     * Constructor
-     *
-     * @param gameState the game state
-     **/
+
     public Bot(GameState gameState) {
         this.gameState = gameState;
         gameState.getGameMap();
     }
 
-    /**
-     * Run
-     *
-     * @return the result
-     **/
+
     public String run() {
 
-        //Jika jumlah Bangunan attak musuh lebih besar dari 2 x Bangunan defense kita dalam satu baris, dan ada lahan kosong mulai dari column >=3 maka akan dibangun bangunan defense
+        //Jika jumlah Bangunan Attack musuh lebih besar dari 2 x Bangunan defense kita dalam satu baris, dan ada lahan kosong mulai dari column >=3 maka akan dibangun bangunan defense
         // Jika lebih dari 1 garis yang memenuhi kondisi tersebut, digunakan algoritma greedy berdasarkan selisih paling tinggi
         int Optimum = 0;
-        int index =-999;
+        int index = -999;
         int Column = 10;
         for (int i = 0; i < gameState.getGameDetails().mapHeight; i++) {
-            int enemyAttackOnRow = getAllBuildingsForPlayeronRowy(PlayerType.B, b -> b.buildingType == BuildingType.ATTACK, i).size();
-            int myDefenseOnRow = getAllBuildingsForPlayeronRowy(PlayerType.A, b -> b.buildingType == BuildingType.DEFENSE, i).size();
+            int enemyAttackOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.B,BuildingType.ATTACK, i);
+            int myDefenseOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.A, BuildingType.DEFENSE, i);
 
-            if ((enemyAttackOnRow - 2*myDefenseOnRow )>Optimum && canAffordBuilding(BuildingType.DEFENSE)) {
-                if (getXfromPlace(i, false)>=3&&getXfromPlace(i, false)!=10) {
+            if ((enemyAttackOnRow - 2 * myDefenseOnRow) > Optimum && canAffordBuilding(BuildingType.DEFENSE)) {
+                if (getXfromPlace(i, false) >= 3 && getXfromPlace(i, false) != 10) {
                     index = i;
                     Optimum = enemyAttackOnRow - 2 * myDefenseOnRow;
                 }
             }
         }
 
-        if (index!=-999){
+        if (index != -999) {
             return placeDefenseBuilding(index);
-        }else{
+        } else {
             //Akan diatur sedemikian rupa sehingga dalam permainan , player memiliki jumlah bangunan energi tepat 8 buah
-            int allenergy = getAllBuildingsForPlayer(PlayerType.A, b -> b.buildingType == BuildingType.ENERGY).size();
-            if (allenergy<8){
-                //Jika ada satu baris yang tidak ada bangunan serang musuh atau jumlah bangunan bertahan + 2 x bangunan serang  lebih besar dari 2 dan 2 x bangunan attack musuh maka akan dibangun bangunan energi
+            int allMyEnergy = getAllBuildingsForPlayerSize(PlayerType.A, BuildingType.ENERGY);
+            if (allMyEnergy < 8) {
+                //Jika ada satu baris yang tidak ada bangunan Attack musuh atau jumlah bangunan Defense + 2 x bangunan Attack Player  lebih besar dari 2 dan lebih besar pula dari 2 x bangunan attack musuh maka akan dibangun bangunan energi
                 //Jika lebih dari satu baris yang memenuhi kondidi tersebut maka akan dipilih secara greedy baris dengan peletakkan column paling belakang
-                for (int i = gameState.getGameDetails().mapHeight-1; i >=0 ; i--) {
-                    int enemyAttackOnRow = getAllBuildingsForPlayeronRowy(PlayerType.B, b -> b.buildingType == BuildingType.ATTACK, i).size();
-                    int myEnergyOnRow = getAllBuildingsForPlayeronRowy(PlayerType.A, b -> b.buildingType == BuildingType.ENERGY, i).size();
-                    int myDefenseOnRow = getAllBuildingsForPlayeronRowy(PlayerType.A, b -> b.buildingType == BuildingType.DEFENSE, i).size();
-                    int myAttackOnRow = getAllBuildingsForPlayeronRowy(PlayerType.A, b -> b.buildingType == BuildingType.ATTACK, i).size();
+                for (int i = gameState.getGameDetails().mapHeight - 1; i >= 0; i--) {
+                    int enemyAttackOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.B, BuildingType.ATTACK, i);
+                    int myEnergyOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.A,  BuildingType.ENERGY, i);
+                    int myDefenseOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.A,  BuildingType.DEFENSE, i);
+                    int myAttackOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.A,BuildingType.ATTACK, i);
 
-                    if (canAffordBuilding(BuildingType.ENERGY)&&((enemyAttackOnRow == 0 && myEnergyOnRow == 0) ||((myDefenseOnRow+myAttackOnRow >= 2*enemyAttackOnRow)&& myDefenseOnRow+myAttackOnRow >2 && myEnergyOnRow <2))){
-                        if(getXfromPlace(i,true)<Column){
-                            Column = getXfromPlace(i,true);
+                    if (canAffordBuilding(BuildingType.ENERGY) && ((enemyAttackOnRow == 0 && myEnergyOnRow == 0) || ((myDefenseOnRow + myAttackOnRow >= 2 * enemyAttackOnRow) && myDefenseOnRow + myAttackOnRow > 2 && myEnergyOnRow < 2))) {
+                        if (getXfromPlace(i, true) < Column) {
+                            Column = getXfromPlace(i, true);
                             index = i;
                         }
                     }
@@ -73,55 +65,30 @@ public class Bot {
             }
         }
 
-        if(index != -999){
+        if (index != -999) {
             return placeEnergyBuilding(Column, index);
-        }
-        else{
+        } else {
             //Jika 3 x bangunan attack  kita lebih besar dari 2 x bangunan attack + bangunan defense musuh dan pada baris tersebut bangunan attack kita jumlahnya dibawah 4, maka akan ditambah bangunan attack
             //Jika terdapat lebih dari satu baris yang sama, maka akan dipilih secara greedy baris dengan keunggulan serangan paling tinggi
             for (int i = 0; i < gameState.getGameDetails().mapHeight; i++) {
-                int enemyAttackOnRow = getAllBuildingsForPlayeronRowy(PlayerType.B, b -> b.buildingType == BuildingType.ATTACK, i).size();
-                int myAttackOnRow = getAllBuildingsForPlayeronRowy(PlayerType.A, b -> b.buildingType == BuildingType.ATTACK, i).size();
-                int DefenseOnRow = getAllBuildingsForPlayeronRowy(PlayerType.B, b -> b.buildingType == BuildingType.DEFENSE, i).size();
-                int myDefenseOnRow = getAllBuildingsForPlayeronRowy(PlayerType.A, b -> b.buildingType == BuildingType.DEFENSE, i).size();
-                //int enemyEnergyOnRow = getAllBuildingsForPlayeronRowy(PlayerType.B, b -> b.buildingType == BuildingType.ATTACK, i).size();
-                if (canAffordBuilding(BuildingType.ATTACK)&& ((3*myAttackOnRow)-2*enemyAttackOnRow+DefenseOnRow>=Optimum) &&myAttackOnRow<4) {
+                int enemyAttackOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.B,BuildingType.ATTACK, i);
+                int myAttackOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.A,  BuildingType.ATTACK, i);
+                int enemyDefenseOnRow = getAllBuildingsForPlayeronRowySize(PlayerType.B,  BuildingType.DEFENSE, i);
+                if (canAffordBuilding(BuildingType.ATTACK) && ((3 * myAttackOnRow) - 2 * enemyAttackOnRow + enemyDefenseOnRow >= Optimum) && myAttackOnRow < 4) {
                     index = i;
-                    Optimum = (3*myAttackOnRow)-2*enemyAttackOnRow+DefenseOnRow+1;
+                    Optimum = (3 * myAttackOnRow) - 2 * enemyAttackOnRow + enemyDefenseOnRow + 1;
                 }
             }
         }
 
-        if (index!=-999){
+        if (index != -999) {
             return placeAttackBuilding(index);
         }
 
         return "";
     }
 
-    /**
-     * Place building in a random row nearest to the back
-     *
-     * @param buildingType the building type
-     * @return the result
-     **/
 
-
-    /**
-     * Place building in a random row nearest to the front
-     *
-     * @param buildingType the building type
-     * @return the result
-     **/
-
-
-    /**
-     * Place building in row y nearest to the front
-     *
-     * @param buildingType the building type
-     * @param y            the y
-     * @return the result
-     **/
     private String placeDefenseBuilding(int y) {
         //Menggunakan konsep greedy untuk sebisa mungkin menempatkan di column paling dekat dengan lawan
         for (int i = (gameState.getGameDetails().mapWidth / 2) - 1; i >= 0; i--) {
@@ -132,16 +99,11 @@ public class Bot {
         return "";
     }
 
-    /**
-     * Place building in row y nearest to the back
-     *
-     * @param buildingType the building type
-     * @param y            the y
-     * @return the result
-     **/
-    private String placeEnergyBuilding( int x, int y) {
+    private String placeEnergyBuilding(int x, int y) {
+
         return buildCommand(x, y, BuildingType.ENERGY);
     }
+
     private String placeAttackBuilding(int y) {
         //Menggunakan konsep greedy untuk sebisa mungkin menempatkan di column dengan prioritas column terurut : 2, 3, 4,5,6,7,0,1
         for (int i = 2; i < gameState.getGameDetails().mapWidth / 2; i++) {
@@ -149,7 +111,7 @@ public class Bot {
                 return buildCommand(i, y, BuildingType.ATTACK);
             }
         }
-        for (int i = 0; i <  2; i++) {
+        for (int i = 0; i < 2; i++) {
             if (isCellEmpty(i, y)) {
                 return buildCommand(i, y, BuildingType.ATTACK);
             }
@@ -157,16 +119,16 @@ public class Bot {
         return "";
     }
 
-    private int getXfromPlace(int y, Boolean asc){
-        if (asc){
+    private int getXfromPlace(int y, Boolean asc) {
+        // Mengembalikkan posisi column kosong pertama pada baris y dari belakang jika asc true atau dari depan jika asc false
+        if (asc) {
             for (int i = 0; i < gameState.getGameDetails().mapWidth / 2; i++) {
                 if (isCellEmpty(i, y)) {
                     return i;
                 }
             }
-        }
-        else{
-            for (int i = gameState.getGameDetails().mapWidth / 2 -1; i >= 0; i--) {
+        } else {
+            for (int i = gameState.getGameDetails().mapWidth / 2 - 1; i >= 0; i--) {
                 if (isCellEmpty(i, y)) {
                     return i;
                 }
@@ -176,66 +138,34 @@ public class Bot {
     }
 
 
-    /**
-     * Construct build command
-     *
-     * @param x            the x
-     * @param y            the y
-     * @param buildingType the building type
-     * @return the result
-     **/
     private String buildCommand(int x, int y, BuildingType buildingType) {
+        //Memberi perintah membangun bangunan buildingType pada colom x dan baris y
         return String.format("%s,%d,%s", String.valueOf(x), y, buildingType.getType());
     }
 
-    /**
-     * Get all buildings for player in row y
-     *
-     * @param playerType the player type
-     * @param filter     the filter
-     * @param y          the y
-     * @return the result
-     **/
-    private List<Building> getAllBuildingsForPlayeronRowy(PlayerType playerType, Predicate<Building> filter, int y) {
+    private int getAllBuildingsForPlayeronRowySize(PlayerType playerType, BuildingType type, int y) {
+        //Mengembalikan jumlah building player playerType di baris y
         return gameState.getGameMap().stream()
                 .filter(c -> c.cellOwner == playerType && c.y == y)
                 .flatMap(c -> c.getBuildings().stream())
-                .filter(filter)
-                .collect(Collectors.toList());
+                .filter( b -> b.buildingType == type)
+                .collect(Collectors.toList())
+                .size();
     }
-    private List<Building> getAllBuildingsForPlayer(PlayerType playerType, Predicate<Building> filter) {
+
+    private int getAllBuildingsForPlayerSize(PlayerType playerType, BuildingType type) {
+        //Mengembalikan jumlah building player playerType di permainan
         return gameState.getGameMap().stream()
                 .filter(c -> c.cellOwner == playerType)
                 .flatMap(c -> c.getBuildings().stream())
-                .filter(filter)
-                .collect(Collectors.toList());
+                .filter( b -> b.buildingType == type)
+                .collect(Collectors.toList())
+                .size();
     }
 
 
-
-
-
-
-    /**
-     * Get all empty cells for column x
-     *
-     * @param x the x
-     * @return the result
-     **/
-    private List<CellStateContainer> getListOfEmptyCellsForColumn(int x) {
-        return gameState.getGameMap().stream()
-                .filter(c -> c.x == x && isCellEmpty(x, c.y))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Checks if cell at x,y is empty
-     *
-     * @param x the x
-     * @param y the y
-     * @return the result
-     **/
     private boolean isCellEmpty(int x, int y) {
+        //Mengecek apakah cell tersebut kosong dari building
         Optional<CellStateContainer> cellOptional = gameState.getGameMap().stream()
                 .filter(c -> c.x == x && c.y == y)
                 .findFirst();
@@ -244,54 +174,27 @@ public class Bot {
             CellStateContainer cell = cellOptional.get();
             return cell.getBuildings().size() <= 0;
         } else {
-            System.out.println("Invalid cell selected");
+            System.out.println("No cell selected");
         }
         return true;
     }
 
-    /**
-     * Checks if building can be afforded
-     *
-     * @param buildingType the building type
-     * @return the result
-     **/
     private boolean canAffordBuilding(BuildingType buildingType) {
+        //Mengecek apakah energi saat ini cukup untuk membeli bangunan bertipe buildingType
         return getEnergy(PlayerType.A) >= getPriceForBuilding(buildingType);
     }
 
-    /**
-     * Gets energy for player type
-     *
-     * @param playerType the player type
-     * @return the result
-     **/
+
     private int getEnergy(PlayerType playerType) {
+        //Mendapatkan nilai energi player playerType
         return gameState.getPlayers().stream()
                 .filter(p -> p.playerType == playerType)
                 .mapToInt(p -> p.energy)
                 .sum();
     }
 
-    /**
-     * Gets price for building type
-     *
-     * @param buildingType the player type
-     * @return the result
-     **/
     private int getPriceForBuilding(BuildingType buildingType) {
+        //Mengembalikan harga building bertipe buildingType
         return gameState.getGameDetails().buildingsStats.get(buildingType).price;
-    }
-
-    /**
-     * Gets price for most expensive building type
-     *
-     * @return the result
-     **/
-    private int getMostExpensiveBuildingPrice() {
-        return gameState.getGameDetails().buildingsStats
-                .values().stream()
-                .mapToInt(b -> b.price)
-                .max()
-                .orElse(0);
     }
 }
